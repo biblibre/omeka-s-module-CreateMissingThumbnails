@@ -17,7 +17,7 @@ class CreateMissingThumbnails extends AbstractJob
 
         $qb = $em->createQueryBuilder();
         $qb
-            ->select('media')
+            ->select('media.id')
             ->from('Omeka\Entity\Media', 'media')
             ->where('media.hasOriginal = true')
             ->andWhere('media.hasThumbnails = false')
@@ -27,30 +27,44 @@ class CreateMissingThumbnails extends AbstractJob
                 $qb->expr()->like('media.mediaType', $qb->expr()->literal('video/%'))
             ));
 
+        // Prevent using too much memory on large databases
+        $qb->setMaxResults(100000);
+
         $query = $qb->getQuery();
-        foreach ($query->iterate() as $row) {
+        $result = $query->getResult();
+        $total = count($result);
+        $logger->info(sprintf('Start processing %d media', $total));
+
+        $i = 0;
+        foreach ($result as $row) {
             if ($this->shouldStop()) {
                 $logger->info('Job stopped');
                 $em->flush();
                 return;
             }
 
-            $media = $row[0];
+            $i++;
+
+            $media = $em->find('Omeka\Entity\Media', $row['id']);
+
+            $logPrefix = sprintf('[%d%%] ', ($i * 100 / $total));
 
             try {
                 $hasThumbnails = $this->createThumbnails($media);
                 if ($hasThumbnails) {
-                    $logger->info(sprintf('Thumbnails created for media %d', $media->getId()));
+                    $logger->info($logPrefix . sprintf('Thumbnails created for media %d', $media->getId()));
                 } else {
-                    $logger->err(sprintf('Thumbnails creation failed for media %d: unknown reason', $media->getId()));
+                    $logger->err($logPrefix . sprintf('Thumbnails creation failed for media %d: unknown reason', $media->getId()));
                 }
             } catch (\Exception $e) {
-                $logger->err(sprintf('Thumbnails creation failed for media %d: %s', $media->getId(), $e->getMessage()));
+                $logger->err($logPrefix . sprintf('Thumbnails creation failed for media %d: %s', $media->getId(), $e->getMessage()));
             }
 
             $em->flush();
             $em->detach($media);
         }
+
+        $logger->info('Job completed');
     }
 
     protected function createThumbnails(Media $media)
