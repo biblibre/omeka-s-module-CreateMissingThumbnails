@@ -92,6 +92,7 @@ class CreateMissingThumbnails extends AbstractJob
         $tempFile->setStorageId($media->getStorageId());
         $hasThumbnails = $tempFile->storeThumbnails();
         $media->setHasThumbnails($hasThumbnails);
+        $tempFile->delete();
 
         return $hasThumbnails;
     }
