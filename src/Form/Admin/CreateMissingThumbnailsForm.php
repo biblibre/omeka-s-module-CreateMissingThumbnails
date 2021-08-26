@@ -2,7 +2,7 @@
 
 namespace CreateMissingThumbnails\Form\Admin;
 
-use Zend\Form\Form;
+use Laminas\Form\Form;
 
 class CreateMissingThumbnailsForm extends Form
 {

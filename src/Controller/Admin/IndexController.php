@@ -5,8 +5,8 @@ namespace CreateMissingThumbnails\Controller\Admin;
 use CreateMissingThumbnails\Form\Admin\CreateMissingThumbnailsForm;
 use CreateMissingThumbnails\Job\CreateMissingThumbnails;
 use Omeka\Stdlib\Message;
-use Zend\Mvc\Controller\AbstractActionController;
-use Zend\View\Model\ViewModel;
+use Laminas\Mvc\Controller\AbstractActionController;
+use Laminas\View\Model\ViewModel;
 
 class IndexController extends AbstractActionController
 {
