@@ -15,37 +15,27 @@ class IndexController extends AbstractActionController
         $form = $this->getForm(CreateMissingThumbnailsForm::class);
 
         if ($this->getRequest()->isPost()) {
-            $form->setData($this->getRequest()->getPost());
-            if ($form->isValid()) {
-                $data = $form->getData();
+            $query = $this->params()->fromPost();
 
-                $job = $this->jobDispatcher()->dispatch(CreateMissingThumbnails::class);
+            $job = $this->jobDispatcher()->dispatch(CreateMissingThumbnails::class, ['query' => $query]);
 
-                $jobUrl = $this->url()->fromRoute('admin/id', [
-                    'controller' => 'job',
-                    'action' => 'show',
-                    'id' => $job->getId(),
-                ]);
+            $jobUrl = $this->url()->fromRoute('admin/id', [
+                'controller' => 'job',
+                'action' => 'show',
+                'id' => $job->getId(),
+            ]);
 
-                $message = new Message(
-                    $this->translate('Thumbnails creation has started. %s'),
-                    sprintf(
-                        '<a href="%s">%s</a>',
-                        htmlspecialchars($jobUrl),
-                        $this->translate('Go to background job')
-                    )
-                );
-                $message->setEscapeHtml(false);
-                $this->messenger()->addSuccess($message);
-                return $this->redirect()->toRoute(null, [], [], true);
-            } else {
-                $this->messenger()->addFormErrors($form);
-            }
+            $message = new Message(
+                $this->translate('Thumbnails creation has started. %s'),
+                sprintf(
+                    '<a href="%s">%s</a>',
+                    htmlspecialchars($jobUrl),
+                    $this->translate('Go to background job')
+                )
+            );
+            $message->setEscapeHtml(false);
+            $this->messenger()->addSuccess($message);
+            return $this->redirect()->toRoute(null, [], [], true);
         }
-
-        $view = new ViewModel;
-        $view->setVariable('form', $form);
-
-        return $view;
     }
 }

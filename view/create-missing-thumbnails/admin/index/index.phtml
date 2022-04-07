@@ -1,6 +1,16 @@
+<?php
+$translate = $this->plugin('translate');
+$this->htmlElement('body')->appendAttribute('class', 'media search');
+?>
 <?php echo $this->pageTitle('Create missing thumbnails'); ?>
 
-<?php $form->prepare(); ?>
-<?php echo $this->form()->openTag($form); ?>
-<?php echo $this->formCollection($form); ?>
-<?php echo $this->form()->closeTag(); ?>
+<form id="advanced-search" method="post" action="<?php echo $this->escapeHtml($this->url(null, ['action' => 'browse'], true)); ?>">
+<?php echo $this->partial(
+    'common/advanced-search',
+    ['query' => $this->params()->fromQuery(), 'resourceType' => 'media']
+); ?>
+<div id="page-actions">
+    <?php echo $this->hyperlink($translate('Reset'), $this->url(null, [], true), ['class' => 'button']); ?>
+    <input type="submit" value="<?php echo $this->escapeHtml($translate('Generate thumbnails')); ?>">
+</div>
+</form>

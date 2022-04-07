@@ -2,6 +2,7 @@
 
 namespace CreateMissingThumbnails\Job;
 
+use Omeka\Api\Adapter\MediaAdapter;
 use Omeka\Api\Representation\MediaRepresentation;
 use Omeka\Entity\Media;
 use Omeka\File\Store\Local as LocalStore;
@@ -14,29 +15,27 @@ class CreateMissingThumbnails extends AbstractJob
         $services = $this->getServiceLocator();
         $em = $services->get('Omeka\EntityManager');
         $logger = $services->get('Omeka\Logger');
+        $api = $services->get('Omeka\ApiManager');
+        $sharedEventManager = $this->getServiceLocator()->get('SharedEventManager');
 
-        $qb = $em->createQueryBuilder();
-        $qb
-            ->select('media.id')
-            ->from('Omeka\Entity\Media', 'media')
-            ->where('media.hasOriginal = true')
-            ->andWhere('media.hasThumbnails = false')
-            ->andWhere($qb->expr()->orX(
-                $qb->expr()->eq('media.mediaType', $qb->expr()->literal('application/pdf')),
-                $qb->expr()->like('media.mediaType', $qb->expr()->literal('image/%')),
-                $qb->expr()->like('media.mediaType', $qb->expr()->literal('video/%'))
-            ));
+        $sharedEventManager->attach(MediaAdapter::class, 'api.search.query', function ($event) {
+            $qb = $event->getParam('queryBuilder');
 
-        // Prevent using too much memory on large databases
-        $qb->setMaxResults(100000);
+            $qb->andWhere('omeka_root.hasOriginal = true');
+            $qb->andWhere('omeka_root.hasThumbnails = false');
 
-        $query = $qb->getQuery();
-        $result = $query->getResult();
-        $total = count($result);
+            // Prevent using too much memory on large databases
+            $qb->setMaxResults(100000);
+        });
+
+        $query = $this->getArg('query', []);
+        $media_ids = $api->search('media', $query, ['returnScalar' => 'id'])->getContent();
+
+        $total = count($media_ids);
         $logger->info(sprintf('Start processing %d media', $total));
 
         $i = 0;
-        foreach ($result as $row) {
+        foreach ($media_ids as $media_id) {
             if ($this->shouldStop()) {
                 $logger->info('Job stopped');
                 $em->flush();
@@ -45,7 +44,7 @@ class CreateMissingThumbnails extends AbstractJob
 
             $i++;
 
-            $media = $em->find('Omeka\Entity\Media', $row['id']);
+            $media = $em->find('Omeka\Entity\Media', $media_id);
 
             $logPrefix = sprintf('[%d%%] ', ($i * 100 / $total));
 
