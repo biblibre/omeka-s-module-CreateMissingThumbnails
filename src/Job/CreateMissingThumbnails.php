@@ -86,6 +86,9 @@ class CreateMissingThumbnails extends AbstractJob
             $mediaRepresentation = new MediaRepresentation($media, $apiAdapters->get('media'));
             $originalUrl = $mediaRepresentation->originalUrl();
             $tempFile = $downloader->download($originalUrl);
+            if ($tempFile === false) {
+                throw new \Exception(sprintf('Failed to download %s', $originalUrl));
+            }
         }
 
         $tempFile->setStorageId($media->getStorageId());
